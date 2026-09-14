@@ -8,3 +8,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Large binary — loaded from CDN at runtime
+opencv.js

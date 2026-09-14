@@ -18,10 +18,10 @@
       window.dispatchEvent(new Event("cv-ready"));
     }
   };
-  /* Fallback CDN loader */
+  /* Fallback — local copy if CDN fails */
   function __cvFallback() {
     var s = document.createElement("script");
-    s.src = "https://docs.opencv.org/4.x/opencv.js";
+    s.src = "opencv.js";
     s.onerror = function () {
       window.__cvFailed = true;
       window.dispatchEvent(new Event("cv-failed"));
@@ -29,7 +29,8 @@
     document.head.appendChild(s);
   }
 </script>
-<script async src="opencv.js" onerror="__cvFallback()"></script>
+<!-- Load OpenCV.js from CDN; local file is a fallback -->
+<script async src="https://docs.opencv.org/4.x/opencv.js" onerror="__cvFallback()"></script>
 </head>
 <body>
 
