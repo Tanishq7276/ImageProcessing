@@ -5,7 +5,7 @@
 # if img is None:
 #     print("Error: Image not found or unable to load.")
 # else:
-#     cv2.imshow('Grayscale Image || CS24091', img)
+#     cv2.imshow('Grayscale Image || CS24050', img)
 #     cv2.waitKey(0)
 #     cv2.destroyAllWindows()
 
@@ -18,16 +18,16 @@
 # else:
 #     B, G, R = cv2.split(image)
 #
-#     cv2.imshow("Original || CS24091", image)
+#     cv2.imshow("Original || CS24050", image)
 #     cv2.waitKey(0)
 #
-#     cv2.imshow("Blue || CS24091", B)
+#     cv2.imshow("Blue || CS24050", B)
 #     cv2.waitKey(0)
 #
-#     cv2.imshow("Green || CS24091", G)
+#     cv2.imshow("Green || CS24050", G)
 #     cv2.waitKey(0)
 #
-#     cv2.imshow("Red || CS24091", R)
+#     cv2.imshow("Red || CS24050", R)
 #     cv2.waitKey(0)
 #
 #     cv2.destroyAllWindows()
@@ -38,7 +38,7 @@
 #
 # img = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
 #
-# cv2.imshow('CS24091', img)
+# cv2.imshow('CS24050', img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
@@ -49,7 +49,7 @@
 #
 # img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 #
-# cv2.imshow('CS24091', img)
+# cv2.imshow('CS24050', img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
