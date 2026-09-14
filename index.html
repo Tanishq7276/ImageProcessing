@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="studio-dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisionStudio Pro · Digital Image Processing Lab</title>
+<meta name="description" content="State-of-the-art interactive digital image processing practical laboratory powered by OpenCV.js WebAssembly. Client-side, privacy-first, professional studio UI.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='50%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23090d16'/%3E%3Crect x='4' y='4' width='56' height='56' rx='12' fill='none' stroke='url(%23g)' stroke-width='2.5'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%2338bdf8' stroke-width='3' stroke-dasharray='3 3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='url(%23g)'/%3E%3Ccircle cx='46' cy='18' r='3' fill='%2310b981'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>
+  /* OpenCV.js runtime hooks */
+  window.Module = {
+    onRuntimeInitialized: function () {
+      window.__cvReady = true;
+      window.dispatchEvent(new Event("cv-ready"));
+    }
+  };
+  /* Fallback CDN loader */
+  function __cvFallback() {
+    var s = document.createElement("script");
+    s.src = "https://docs.opencv.org/4.x/opencv.js";
+    s.onerror = function () {
+      window.__cvFailed = true;
+      window.dispatchEvent(new Event("cv-failed"));
+    };
+    document.head.appendChild(s);
+  }
+</script>
+<script async src="opencv.js" onerror="__cvFallback()"></script>
+</head>
+<body>
+
+<!-- Ambient Glow Backdrop -->
+<div class="ambient-glow" aria-hidden="true">
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+</div>
+
+<!-- ══════════════════ TOP BAR ══════════════════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m14.31 8 5.74 9.94"/>
+          <path d="M9.69 8h11.48"/>
+          <path d="m7.38 12 5.74-9.94"/>
+          <path d="M9.69 16 3.95 6.06"/>
+          <path d="M14.31 16H2.83"/>
+          <path d="m16.62 12-5.74 9.94"/>
+        </svg>
+        <span class="mark-glow"></span>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title-row">
+          <span class="brand-name">VisionStudio <span class="badge-pro">PRO</span></span>
+        </div>
+        <span class="brand-sub">Computer Vision &amp; Digital Image Processing Lab · CSE</span>
+      </div>
+    </div>
+
+    <!-- Center Quick Actions & Status -->
+    <div class="topbar-center">
+      <div class="sample-preset-bar">
+        <span class="preset-label">Quick Samples:</span>
+        <button class="preset-btn active" id="quickSample1" title="Sunset Geometric Landscape">🌆 Synth City</button>
+        <button class="preset-btn" id="quickSample2" title="High-contrast Optical Target">🎯 Optics Target</button>
+        <button class="preset-btn" id="quickSample3" title="Vibrant Studio Portrait">🎨 Color Splash</button>
+      </div>
+    </div>
+
+    <!-- Topbar Right Actions -->
+    <div class="topbar-actions">
+      <!-- Engine Status Chip -->
+      <div class="chip engine-chip" id="engineChip" title="OpenCV.js WebAssembly Engine status">
+        <span class="dot-radar">
+          <span class="dot loading" id="engineDot"></span>
+          <span class="dot-ping"></span>
+        </span>
+        <span id="engineText" class="engine-text">Loading engine…</span>
+      </div>
+
+      <!-- Student Profile Badge -->
+      <div class="student-card" id="studentCard">
+        <div class="avatar-ring">
+          <div class="avatar" id="studentAvatar">TG</div>
+        </div>
+        <div class="student-info">
+          <strong id="studentName">Tanishq Gupta</strong>
+          <span id="studentMeta">CSE · Year 3 · CS24050</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════ MAIN APPLICATION ══════════════════ -->
+<div class="app">
+
+  <!-- ══════════════════ STUDIO SIDEBAR ══════════════════ -->
+  <aside class="sidebar">
+    
+    <!-- Upload / Media Source Card -->
+    <div class="upload-studio-card" id="dropZone">
+      <input id="imageInput" type="file" accept="image/*" hidden>
+
+      <div class="upload-idle" id="uploadIdle">
+        <div class="upload-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="upload-info">
+          <p class="upload-title">Drop source image here</p>
+          <p class="upload-sub">or <button class="link-btn glow-link" id="browseBtn" type="button">browse files</button></p>
+        </div>
+        <div class="upload-formats">
+          <span>PNG</span><span>JPG</span><span>WEBP</span><span>BMP</span>
+        </div>
+        <button id="loadSample" class="btn-sample-trigger" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          Load Studio Sample
+        </button>
+      </div>
+
+      <div class="upload-preview" id="uploadPreview" hidden>
+        <div class="preview-thumb-wrap">
+          <img id="uploadThumb" alt="Loaded source preview">
+          <span class="preview-live-badge">ACTIVE</span>
+        </div>
+        <div class="upload-preview-meta">
+          <strong id="fileName">source_image.png</strong>
+          <div class="meta-chips">
+            <span class="chip-res" id="fileDims">— × —</span>
+            <span class="chip-depth">8-bit RGBA</span>
+          </div>
+          <div class="upload-actions">
+            <button class="action-link" id="changeBtn" type="button">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Replace
+            </button>
+            <button class="action-link" id="sampleBtn2" type="button">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Preset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Spectral Histogram Inspector -->
+    <div class="histogram-card" id="histogramCard">
+      <div class="hist-head">
+        <div class="hist-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <span>Live Spectral Histogram</span>
+        </div>
+        <div class="hist-channel-toggles">
+          <span class="ch-tag ch-r" title="Red Channel">R</span>
+          <span class="ch-tag ch-g" title="Green Channel">G</span>
+          <span class="ch-tag ch-b" title="Blue Channel">B</span>
+          <span class="ch-tag ch-lum" title="Luminance">L</span>
+        </div>
+      </div>
+      <div class="hist-canvas-wrap">
+        <canvas id="histCanvas" width="260" height="90"></canvas>
+        <div class="hist-overlay-placeholder" id="histPlaceholder">Load image for spectral telemetry</div>
+      </div>
+      <div class="hist-footer" id="histFooter">
+        <div class="metric-col">
+          <span class="metric-lbl">Mean Lum</span>
+          <span class="metric-val" id="lumMean">—</span>
+        </div>
+        <div class="metric-col">
+          <span class="metric-lbl">Entropy</span>
+          <span class="metric-val" id="entropyVal">—</span>
+        </div>
+        <div class="metric-col">
+          <span class="metric-lbl">Channels</span>
+          <span class="metric-val">RGB·A</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Experiment Navigation Navigation -->
+    <div class="nav-section-title">EXPERIMENT MODULES</div>
+    <nav id="tabs" class="nav" aria-label="Practicals Navigation">
+      
+      <!-- Group 1: Foundations -->
+      <div class="nav-group">
+        <div class="nav-group-label">Foundations &amp; Basics</div>
+        <button class="nav-item active" data-tab="p1" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Prelab / Setup</span>
+            <span class="nav-desc">Python &amp; CV Runtime</span>
+          </span>
+          <span class="nav-shortcut">1</span>
+        </button>
+
+        <button class="nav-item" data-tab="p2" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">RGB, Gray &amp; Bitwise</span>
+            <span class="nav-desc">Math &amp; Boolean Ops</span>
+          </span>
+          <span class="nav-shortcut">2</span>
+        </button>
+
+        <button class="nav-item" data-tab="p3" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Geometry Transforms</span>
+            <span class="nav-desc">Affine, Warp &amp; Scale</span>
+          </span>
+          <span class="nav-shortcut">3</span>
+        </button>
+      </div>
+
+      <!-- Group 2: Filtering & Enhancement -->
+      <div class="nav-group">
+        <div class="nav-group-label">Enhancement &amp; Filtering</div>
+        <button class="nav-item" data-tab="p4" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Image Enhancement</span>
+            <span class="nav-desc">Equalize &amp; Threshold</span>
+          </span>
+          <span class="nav-shortcut">4</span>
+        </button>
+
+        <button class="nav-item" data-tab="p5" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Spatial Filters</span>
+            <span class="nav-desc">Gaussian, Median &amp; Bilateral</span>
+          </span>
+          <span class="nav-shortcut">5</span>
+        </button>
+
+        <button class="nav-item" data-tab="p8" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="4.5"/><rect x="12" y="12" width="9" height="9" rx="1.5"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Morphology Ops</span>
+            <span class="nav-desc">Erode, Dilate, Open &amp; Close</span>
+          </span>
+          <span class="nav-shortcut">6</span>
+        </button>
+      </div>
+
+      <!-- Group 3: Vision, Restoration & Features -->
+      <div class="nav-group">
+        <div class="nav-group-label">Restoration &amp; Detection</div>
+        <button class="nav-item" data-tab="p6" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Image Inpainting</span>
+            <span class="nav-desc">Telea &amp; Navier-Stokes</span>
+          </span>
+          <span class="nav-shortcut">7</span>
+        </button>
+
+        <button class="nav-item" data-tab="p9" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Correlation Detection</span>
+            <span class="nav-desc">Template Matching</span>
+          </span>
+          <span class="nav-shortcut">8</span>
+        </button>
+
+        <button class="nav-item" data-tab="p11" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Edge Detection</span>
+            <span class="nav-desc">Canny, Sobel &amp; Prewitt</span>
+          </span>
+          <span class="nav-shortcut">9</span>
+        </button>
+      </div>
+
+      <!-- Group 4: Analysis & Encodings -->
+      <div class="nav-group">
+        <div class="nav-group-label">Color &amp; Compression</div>
+        <button class="nav-item" data-tab="p10" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".7"/><circle cx="17.5" cy="10.5" r=".7"/><circle cx="8.5" cy="7.5" r=".7"/><circle cx="6.5" cy="12.5" r=".7"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.563-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Colour Spaces</span>
+            <span class="nav-desc">HSV, YCrCb, CIELAB</span>
+          </span>
+          <span class="nav-shortcut">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="p7" type="button">
+          <span class="nav-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+          </span>
+          <span class="nav-label-box">
+            <span class="nav-label">Lossless Compression</span>
+            <span class="nav-desc">Run-Length Encoding (RLE)</span>
+          </span>
+          <span class="nav-shortcut">C</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Privacy & Security Shield -->
+    <div class="privacy-card">
+      <div class="privacy-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="privacy-text">
+        <strong>100% Client-Side Sandbox</strong>
+        <span>Zero server uploads. Computed entirely in local WebAssembly memory.</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════════ WORKSPACE CONTENT ══════════════════ -->
+  <main class="content">
+
+    <!-- ── 01 · PRELAB ── -->
+    <section id="p1" class="panel active">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 01</span> Foundational Setup</p>
+          <span class="meta-pill">Jupyter / PyCharm · OpenCV 4.x · Python 3.10+</span>
+        </div>
+        <h1>Prelab: Python &amp; Image Processing Environment</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <div class="aim-body">
+            <strong>Laboratory Objective &amp; Rationale</strong>
+            <p>Establish a reproducible computational environment for digital image processing; verify multidimensional NumPy matrix operations, OpenCV color channel ordering (BGR vs RGB), and visualization pipelines.</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Quick Workflow Timeline -->
+      <div class="studio-steps">
+        <div class="step-card">
+          <div class="step-badge">01</div>
+          <div class="step-content">
+            <strong>Load or Drag Image</strong>
+            <span>Upload any local raster asset or choose from our calibrated studio presets.</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-badge">02</div>
+          <div class="step-content">
+            <strong>Select Algorithm</strong>
+            <span>Navigate through the 11 practical modules in the navigation dock.</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-badge">03</div>
+          <div class="step-content">
+            <strong>Interactive Compare</strong>
+            <span>Use the interactive split-slider or side-by-side inspect modes in real time.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Information Grid -->
+      <div class="cards-grid">
+        <div class="info-card">
+          <div class="card-head">
+            <div class="card-title-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            </div>
+            <h3>Required Scientific Python Stack</h3>
+          </div>
+          <p>The academic curriculum leverages high-performance Python bindings over native C++ implementations:</p>
+          <div class="tech-chips-grid">
+            <div class="tech-item"><span class="tech-dot"></span><b>OpenCV</b><span>cv2 image matrix</span></div>
+            <div class="tech-item"><span class="tech-dot"></span><b>NumPy</b><span>N-D tensor slicing</span></div>
+            <div class="tech-item"><span class="tech-dot"></span><b>Matplotlib</b><span>pyplot figures</span></div>
+            <div class="tech-item"><span class="tech-dot"></span><b>Scikit-Image</b><span>color metrics</span></div>
+            <div class="tech-item"><span class="tech-dot"></span><b>Pandas</b><span>telemetry tables</span></div>
+            <div class="tech-item"><span class="tech-dot"></span><b>SciPy</b><span>spatial signal filters</span></div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="card-head">
+            <div class="card-title-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3>WebAssembly Studio Architecture</h3>
+          </div>
+          <p>This web interface executes the genuine <strong>OpenCV C++ core compiled to WebAssembly (Wasm)</strong> running inside your browser thread at near-native SIMD speed.</p>
+          <div class="wasm-highlight">
+            <div class="wasm-item">
+              <span class="wasm-num">0 ms</span>
+              <span>Network Upload Lag</span>
+            </div>
+            <div class="wasm-divider"></div>
+            <div class="wasm-item">
+              <span class="wasm-num">4.13</span>
+              <span>OpenCV.js Engine</span>
+            </div>
+            <div class="wasm-divider"></div>
+            <div class="wasm-item">
+              <span class="wasm-num">100%</span>
+              <span>Privacy Preserved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Code Snippet -->
+      <div class="studio-code-card">
+        <div class="code-header">
+          <div class="code-tabs">
+            <span class="code-tab active">environment_check.py</span>
+            <span class="code-lang">Python 3.x</span>
+          </div>
+          <button class="code-copy-btn" id="copySetup" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy Snippet</span>
+          </button>
+        </div>
+        <pre class="code-body"><code id="setupCode"># Automated Laboratory Setup & Verification
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+print(f"[✓] OpenCV Version: {cv2.__version__}")
+print(f"[✓] NumPy Version:  {np.__version__}")
+
+# Verify Matrix Allocation & Color Conversion
+test_canvas = np.zeros((256, 256, 3), dtype=np.uint8)
+cv2.circle(test_canvas, (128, 128), 64, (0, 255, 128), -1)
+gray_canvas = cv2.cvtColor(test_canvas, cv2.COLOR_BGR2GRAY)
+
+print(f"[✓] Environment initialized successfully. Matrix shape: {test_canvas.shape}")</code></pre>
+      </div>
+    </section>
+
+    <!-- ── 02 · RGB / OPERATIONS ── -->
+    <section id="p2" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 02</span> Matrix Arithmetic &amp; Logic</p>
+          <span class="meta-pill">cv::cvtColor · cv::add · cv::bitwise_*</span>
+        </div>
+        <h1>RGB, Grayscale, Arithmetic &amp; Bitwise Operations</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Deconstruct multi-channel tensors into single-channel luminance, execute clamped arithmetic scalar additions/subtractions, and evaluate bitwise Boolean masks (AND, OR, XOR, NOT).</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Channel Decomposition</span>
+          <button class="btn btn-studio" data-op="gray" type="button"><span class="btn-glow"></span>Grayscale (Luminance)</button>
+          <button class="btn btn-studio" data-op="rgb" type="button"><span class="btn-glow"></span>RGB Representation</button>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Scalar Arithmetic (±35)</span>
+          <button class="btn btn-studio" data-op="add" type="button"><span class="btn-glow"></span>Brightness +35 (Add)</button>
+          <button class="btn btn-studio" data-op="subtract" type="button"><span class="btn-glow"></span>Brightness −35 (Sub)</button>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Bitwise Boolean Algebra</span>
+          <button class="btn btn-studio" data-op="and" type="button"><span class="btn-glow"></span>Bitwise AND</button>
+          <button class="btn btn-studio" data-op="or" type="button"><span class="btn-glow"></span>Bitwise OR</button>
+          <button class="btn btn-studio" data-op="xor" type="button"><span class="btn-glow"></span>Bitwise XOR</button>
+          <button class="btn btn-studio" data-op="not" type="button"><span class="btn-glow"></span>Bitwise NOT</button>
+        </div>
+      </div>
+
+      <div id="p2out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Operation Execution</p>
+          <span>Select any color space conversion, arithmetic scalar or bitwise logic button above.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 03 · GEOMETRIC TRANSFORMATIONS ── -->
+    <section id="p3" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 03</span> Spatial Transforms &amp; Warping</p>
+          <span class="meta-pill">cv::warpAffine · cv::getRotationMatrix2D · cv::resize</span>
+        </div>
+        <h1>2-D Geometric Transformations &amp; Coordinate Mapping</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Compute 2×3 Affine transformation matrices for linear translation, Euclidean rotation about center centroid, bi-linear scaling, horizontal shearing, axial reflection, and Region of Interest (ROI) cropping.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group transform-sliders-group">
+          <span class="tg-label">Affine Parameters</span>
+          <div class="slider-field">
+            <span class="sf-label">Translate X</span>
+            <input id="tx" type="range" min="-200" max="200" value="50">
+            <output for="tx">50</output>
+          </div>
+          <div class="slider-field">
+            <span class="sf-label">Translate Y</span>
+            <input id="ty" type="range" min="-200" max="200" value="30">
+            <output for="ty">30</output>
+          </div>
+          <div class="slider-field">
+            <span class="sf-label">Rotation Angle</span>
+            <input id="angle" type="range" min="-180" max="180" value="30" data-suffix="°">
+            <output for="angle">30°</output>
+          </div>
+          <div class="slider-field">
+            <span class="sf-label">Scale Factor</span>
+            <input id="scale" type="range" min="50" max="200" value="120" data-suffix="%">
+            <output for="scale">120%</output>
+          </div>
+          <div class="slider-field">
+            <span class="sf-label">Shear Factor</span>
+            <input id="shear" type="range" min="-50" max="50" value="15">
+            <output for="shear">15</output>
+          </div>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Execute Transformation</span>
+          <button class="btn btn-studio" data-transform="translate" type="button"><span class="btn-glow"></span>Translation</button>
+          <button class="btn btn-studio" data-transform="rotate" type="button"><span class="btn-glow"></span>Rotation</button>
+          <button class="btn btn-studio" data-transform="scale" type="button"><span class="btn-glow"></span>Scaling</button>
+          <button class="btn btn-studio" data-transform="shear" type="button"><span class="btn-glow"></span>Shearing</button>
+          <button class="btn btn-studio" data-transform="reflect" type="button"><span class="btn-glow"></span>Reflection</button>
+          <button class="btn btn-studio" data-transform="crop" type="button"><span class="btn-glow"></span>ROI Cropping (60%)</button>
+        </div>
+      </div>
+
+      <div id="p3out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Transformation Execution</p>
+          <span>Tune affine sliders above and click any geometric action button.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 04 · ENHANCEMENT ── -->
+    <section id="p4" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 04</span> Contrast &amp; Spatial Enhancement</p>
+          <span class="meta-pill">cv::equalizeHist · cv::GaussianBlur · cv::filter2D · cv::threshold</span>
+        </div>
+        <h1>Image Enhancement in Spatial Domain &amp; Segmentation</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Perform Cumulative Distribution Function (CDF) histogram equalization for contrast expansion, high-pass Laplacian sharpening, Gaussian spatial smoothing, and binary intensity thresholding.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Enhancement Operations</span>
+          <button class="btn btn-studio" data-enhance="hist" type="button"><span class="btn-glow"></span>Histogram Equalization</button>
+          <button class="btn btn-studio" data-enhance="smooth" type="button"><span class="btn-glow"></span>Gaussian Smoothing (7×7)</button>
+          <button class="btn btn-studio" data-enhance="sharp" type="button"><span class="btn-glow"></span>Laplacian Sharpening</button>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Binary Segmentation</span>
+          <div class="slider-field">
+            <span class="sf-label">Threshold Cutoff</span>
+            <input id="threshold" type="range" min="0" max="255" value="128">
+            <output for="threshold">128</output>
+          </div>
+          <button class="btn btn-accent-neon" data-enhance="threshold" type="button"><span class="btn-glow"></span>Apply Thresholding</button>
+        </div>
+      </div>
+
+      <div id="p4out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Enhancement Execution</p>
+          <span>Select an enhancement operator or binary threshold cutoff.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 05 · SPATIAL FILTERS ── -->
+    <section id="p5" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 05</span> Convolutional Filtering</p>
+          <span class="meta-pill">cv::blur · cv::GaussianBlur · cv::medianBlur · cv::bilateralFilter</span>
+        </div>
+        <h1>Spatial Domain Convolution &amp; Noise Removal Filters</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Convolve spatial neighborhood kernels against target matrices: box averaging, 2D Gaussian density weighting, non-linear median order-statistics (salt-and-pepper reduction), and edge-preserving bilateral filtering.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Kernel Window Size</span>
+          <div class="segmented-pro" id="kernelSeg">
+            <button class="seg-btn active" data-k="3" type="button">3 × 3 Kernel</button>
+            <button class="seg-btn" data-k="5" type="button">5 × 5 Kernel</button>
+            <button class="seg-btn" data-k="7" type="button">7 × 7 Kernel</button>
+          </div>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Spatial Filter Type</span>
+          <button class="btn btn-studio" data-filter="average" type="button"><span class="btn-glow"></span>Box Averaging</button>
+          <button class="btn btn-studio" data-filter="gaussian" type="button"><span class="btn-glow"></span>Gaussian Blur</button>
+          <button class="btn btn-studio" data-filter="median" type="button"><span class="btn-glow"></span>Median Filter</button>
+          <button class="btn btn-studio" data-filter="bilateral" type="button"><span class="btn-glow"></span>Bilateral (Edge-Preserving)</button>
+        </div>
+      </div>
+
+      <div id="p5out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Spatial Filter Execution</p>
+          <span>Choose a kernel dimension and execute any linear or non-linear filter.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 06 · INPAINTING ── -->
+    <section id="p6" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 06</span> Image Restoration</p>
+          <span class="meta-pill">cv::inpaint · Fast Marching (Telea) · Fluid Dynamics (NS)</span>
+        </div>
+        <h1>Image Inpainting &amp; Defect Restoration Studio</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Reconstruct occluded or damaged regions by propagating boundary gradients inward using the Alexandru Telea Fast Marching Method (FMM) and Bertalmio-Sapiro-Caselles-Ballester Navier–Stokes partial differential equations.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Interactive Brush Controls</span>
+          <div class="slider-field">
+            <span class="sf-label">Brush Radius</span>
+            <input id="brush" type="range" min="3" max="50" value="14">
+            <output for="brush">14px</output>
+          </div>
+          <button class="btn btn-outline" id="clearMask" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+            Clear Damage Marks
+          </button>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Restoration PDE Solvers</span>
+          <button class="btn btn-accent-neon" data-inpaint="telea" type="button"><span class="btn-glow"></span>Telea Algorithm (FMM)</button>
+          <button class="btn btn-accent-neon" data-inpaint="ns" type="button"><span class="btn-glow"></span>Navier–Stokes (NS)</button>
+        </div>
+      </div>
+
+      <!-- Inpainting Canvas Workspace -->
+      <div class="canvas-studio-frame">
+        <div class="canvas-studio-head">
+          <div class="csh-left">
+            <span class="live-dot-indicator"></span>
+            <b>Interactive Masking Canvas</b>
+            <span>Drag pointer over scratches, objects, or text to paint restoration mask</span>
+          </div>
+          <div class="csh-right">
+            <span class="hint-tag"><kbd>Click &amp; Drag</kbd> Paint Mask</span>
+          </div>
+        </div>
+        <div class="canvas-studio-body" id="canvasStudioBody">
+          <canvas id="maskCanvas" width="640" height="400"></canvas>
+          <div class="canvas-hint" id="canvasHint">Load an image in the sidebar to begin brush marking</div>
+        </div>
+      </div>
+
+      <div id="p6out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Inpainting Reconstruction</p>
+          <span>Paint red scratch marks on the canvas above and trigger Telea or Navier-Stokes solver.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 07 · COMPRESSION ── -->
+    <section id="p7" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 07</span> Lossless Data Encoding</p>
+          <span class="meta-pill">Run-Length Encoding (RLE) · Byte Entropy</span>
+        </div>
+        <h1>Lossless Compression &amp; Run-Length Encoding (RLE)</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Implement sequential run-length coding on consecutive byte sequences, analyze compression efficiency ratios across flat versus high-frequency textures, and quantify bitstream savings.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <button class="btn btn-accent-neon btn-lg" id="compress" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="btn-glow"></span>
+          Execute Lossless RLE Stream Compression
+        </button>
+      </div>
+
+      <!-- Compression Stats Grid -->
+      <div id="compressionStats" class="studio-stats-grid">
+        <div class="stat-empty-studio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+          <p>Run the compression encoder to analyze byte stream compaction ratios.</p>
+        </div>
+      </div>
+
+      <!-- RLE Encoded Stream Preview -->
+      <div class="studio-code-card" id="rleBlock" hidden>
+        <div class="code-header">
+          <div class="code-tabs">
+            <span class="code-tab active">encoded_bitstream.rle</span>
+            <span class="code-lang">Byte-Pair Tuples (Value, Run)</span>
+          </div>
+          <button class="code-copy-btn" id="copyRle" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy Stream</span>
+          </button>
+        </div>
+        <pre class="code-body"><code id="rlePreview"></code></pre>
+      </div>
+    </section>
+
+    <!-- ── 08 · MORPHOLOGY ── -->
+    <section id="p8" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 08</span> Binary Mathematical Morphology</p>
+          <span class="meta-pill">cv::erode · cv::dilate · cv::morphologyEx (OPEN / CLOSE)</span>
+        </div>
+        <h1>Morphological Image Processing &amp; Shape Analysis</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="7.5" r="4.5"/><rect x="12" y="12" width="9" height="9" rx="1.5"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Apply non-linear structuring elements (SE) to binary image topology: erosion (boundary contraction), dilation (boundary expansion), morphological opening (noise removal), and closing (hole filling).</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Structuring Element (SE)</span>
+          <div class="segmented-pro" id="morphKernelSeg">
+            <button class="seg-btn active" data-k="3" type="button">3 × 3 SE</button>
+            <button class="seg-btn" data-k="5" type="button">5 × 5 SE</button>
+            <button class="seg-btn" data-k="7" type="button">7 × 7 SE</button>
+          </div>
+          <span class="tool-note-pill">Auto-binarized at threshold = 127</span>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Morphological Operators</span>
+          <button class="btn btn-studio" data-morph="erode" type="button"><span class="btn-glow"></span>Erosion (Minkowski Sub)</button>
+          <button class="btn btn-studio" data-morph="dilate" type="button"><span class="btn-glow"></span>Dilation (Minkowski Add)</button>
+          <button class="btn btn-studio" data-morph="open" type="button"><span class="btn-glow"></span>Opening (Erode ➔ Dilate)</button>
+          <button class="btn btn-studio" data-morph="close" type="button"><span class="btn-glow"></span>Closing (Dilate ➔ Erode)</button>
+        </div>
+      </div>
+
+      <div id="p8out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Morphological Execution</p>
+          <span>Select a structuring element dimension and click any morphological operator.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 09 · CORRELATION ── -->
+    <section id="p9" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 09</span> Normalized Cross-Correlation</p>
+          <span class="meta-pill">cv::matchTemplate · TM_CCOEFF_NORMED · cv::minMaxLoc</span>
+        </div>
+        <h1>Object Detection via Normalized Correlation Matching</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Compute 2-D cross-correlation coefficients between a target sub-template and search scene to localize object instances under brightness invariance using normalized cross-correlation $\gamma(x,y)$.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Target Template ROI</span>
+          <label class="btn btn-outline btn-file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Choose Template Image
+            <input id="templateInput" type="file" accept="image/*" hidden>
+          </label>
+          <button class="btn btn-studio" id="autoCropTemplate" type="button" title="Auto-extract center patch as test template">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+            Auto-Crop Center Patch
+          </button>
+          <div class="template-chip-pro" id="templateChip" hidden>
+            <img id="templateThumb" alt="Selected template patch">
+            <div class="template-chip-info">
+              <strong id="templateName">template.png</strong>
+              <span id="templateDims">— × —</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-accent-neon btn-lg" id="detect" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></svg>
+          <span class="btn-glow"></span>
+          Execute Correlation Detection
+        </button>
+      </div>
+
+      <div id="p9out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Template Correlation Matching</p>
+          <span>Select or auto-crop a template patch, then click Execute Correlation Detection.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 10 · COLOUR SPACES ── -->
+    <section id="p10" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 10</span> Colorimetry &amp; Perceptual Spaces</p>
+          <span class="meta-pill">RGB · HSV (Cylindrical) · YCrCb · CIELAB (L*a*b*)</span>
+        </div>
+        <h1>Colour Space Transformations &amp; Chrominance Analysis</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".7"/><circle cx="17.5" cy="10.5" r=".7"/><circle cx="8.5" cy="7.5" r=".7"/><circle cx="6.5" cy="12.5" r=".7"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.563-5.554C21.965 6.012 17.461 2 12 2z"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Transform standard sRGB coordinates into human-perceptual color spaces: HSV (Hue, Saturation, Value), broadcast YCrCb (Luminance, Chrominance Blue/Red), and device-independent CIE $L^*a^*b^*$.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Target Representation Space</span>
+          <button class="btn btn-studio" data-color="rgb" type="button"><span class="btn-glow"></span>sRGB Space</button>
+          <button class="btn btn-studio" data-color="hsv" type="button"><span class="btn-glow"></span>HSV (Hue / Sat / Val)</button>
+          <button class="btn btn-studio" data-color="ycrcb" type="button"><span class="btn-glow"></span>YCrCb (Broadcast)</button>
+          <button class="btn btn-studio" data-color="lab" type="button"><span class="btn-glow"></span>CIE L*a*b* (Perceptual)</button>
+        </div>
+      </div>
+
+      <div id="p10out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Colour Space Conversion</p>
+          <span>Click any target color space representation above to transform matrix channels.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 11 · EDGE DETECTION ── -->
+    <section id="p11" class="panel">
+      <header class="panel-head">
+        <div class="panel-eyebrow-row">
+          <p class="eyebrow"><span class="badge-module">EXP 11</span> Edge Gradients &amp; Differential Operators</p>
+          <span class="meta-pill">cv::Canny · cv::Sobel · Prewitt Derivative Masks</span>
+        </div>
+        <h1>Differential Edge Detection: Canny, Sobel &amp; Prewitt</h1>
+        <div class="aim-card">
+          <div class="aim-icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div class="aim-body">
+            <strong>Laboratory Objective</strong>
+            <p>Compute first-order directional intensity gradients with discrete Sobel and Prewitt convolution kernels, and evaluate Canny’s multi-stage optimal edge pipeline with hysteresis thresholding.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="studio-toolbar">
+        <div class="tool-group">
+          <span class="tg-label">Canny Hysteresis Bounds</span>
+          <div class="slider-field">
+            <span class="sf-label">Lower Cutoff (T_low)</span>
+            <input id="cannyLow" type="range" min="0" max="200" value="50">
+            <output for="cannyLow">50</output>
+          </div>
+          <div class="slider-field">
+            <span class="sf-label">Upper Cutoff (T_high)</span>
+            <input id="cannyHigh" type="range" min="50" max="300" value="150">
+            <output for="cannyHigh">150</output>
+          </div>
+        </div>
+        <div class="tool-group">
+          <span class="tg-label">Gradient Operators</span>
+          <button class="btn btn-accent-neon" data-edge="canny" type="button"><span class="btn-glow"></span>Canny Edge Detector</button>
+          <button class="btn btn-studio" data-edge="sobel" type="button"><span class="btn-glow"></span>Sobel Gradient Magnitude</button>
+          <button class="btn btn-studio" data-edge="prewitt" type="button"><span class="btn-glow"></span>Prewitt Gradient Magnitude</button>
+        </div>
+      </div>
+
+      <div id="p11out" class="result-grid">
+        <div class="empty-studio-state">
+          <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <p>Awaiting Edge Detection Execution</p>
+          <span>Tune Canny threshold parameters and run Canny, Sobel, or Prewitt operators.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Studio Footer -->
+    <footer class="studio-footer">
+      <div class="footer-left">
+        <span class="footer-logo">VisionStudio <span class="badge-pro">PRO</span></span>
+        <span class="footer-sep">·</span>
+        <span>5th Semester Practical Laboratory · Computer Science &amp; Engineering</span>
+      </div>
+      <div class="footer-right">
+        <span>Powered by OpenCV.js WebAssembly 4.13</span>
+        <span class="footer-sep">·</span>
+        <span class="footer-privacy-tag">🔒 Zero-Data-Leak Sandbox</span>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<!-- ══════════════════ FLOATING PIXEL LOUPE ══════════════════ -->
+<div id="pixelLoupe" class="pixel-loupe-hud" hidden>
+  <div class="loupe-header">
+    <span class="loupe-coords" id="loupeCoords">X: 0, Y: 0</span>
+    <span class="loupe-color-badge" id="loupeColorPreview"></span>
+  </div>
+  <div class="loupe-canvas-wrap">
+    <canvas id="loupeCanvas" width="80" height="80"></canvas>
+    <div class="loupe-reticle"></div>
+  </div>
+  <div class="loupe-readout">
+    <span id="loupeRgb">RGB(0, 0, 0)</span>
+    <span id="loupeHex">#000000</span>
+  </div>
+</div>
+
+<!-- ══════════════════ TOAST NOTIFICATIONS ══════════════════ -->
+<div id="toasts" class="toasts-container" aria-live="polite"></div>
+
+<!-- Scripts -->
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
